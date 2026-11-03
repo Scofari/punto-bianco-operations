@@ -8,3 +8,6 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 credentials.local.md
+
+src/app/fonts/*.otf
+docs/licenses/*.pdf
