@@ -39,7 +39,7 @@ Codex generated the initial schema, services, UI, tests and documentation. Conte
 ### Measured evidence
 
 - Six domain tests passed.
-- Fifty-five HTTP checks passed locally and on the deployed application.
+- Sixty-one HTTP checks passed locally and on the deployed application.
 - Direct API tests verified private-schema isolation, notification RLS, denied anonymous writes and disabled public signup.
 - A browser completed registration at 375px, case start/completion, lodging reservation, driver transfer visibility and notification persistence; all seven role screens were checked, with zero JavaScript errors.
 - Fifty distinct authenticated sessions held fifty authorized realtime subscriptions concurrently. A bounded hosted test completed 150 requests, including 24 idempotent submission replays, with zero unexpected errors and a warm-request p95 of 539 ms. The dataset and repeated identities limit what this proves; see load-results.json.

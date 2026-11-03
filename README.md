@@ -7,7 +7,7 @@ A Romanian internal application for coordinating dental treatment visits, accomm
 
 ## Review the complete workflow
 
-Demo credentials are delivered separately in the ignored `credentials.local.md` file. No password or database connection string belongs in this repository. The seven demo logins use `{role}@demo.puntobianco.test`, where the role is one of the identifiers below.
+Demo credentials are delivered separately in the ignored `credentials.local.md` file. No password or database connection string belongs in this repository. For reviewer convenience, the fictional demo accounts share one generated password; real staff accounts should use separate credentials. The seven demo logins use `{role}@demo.puntobianco.test`, where the role is one of the identifiers below.
 
 | Role            | Workspace and permissions                                                |
 | --------------- | ------------------------------------------------------------------------ |
@@ -68,11 +68,11 @@ npm run test:browser
 
 Integration commands use `.env.local` and fictional records in the assessment database. Set `TEST_BASE_URL` to the deployment to run against hosting. The load check prepares an ignored, temporary Auth-session cache used by the browser workflow; it must not be published. Chrome must be installed for browser checks.
 
-Recorded results: six domain tests, 55 HTTP workflow checks both locally and on Vercel, direct Data API/RLS checks, and the complete seven-role browser workflow. Desktop and 375px mobile views were visually inspected. The mobile document has no horizontal overflow, and the browser workflow reported no JavaScript errors.
+Recorded results: six domain tests, 61 HTTP workflow checks both locally and on Vercel, direct Data API/RLS checks, and the complete seven-role browser workflow. Desktop and 375px mobile views were visually inspected. The mobile document has no horizontal overflow, and the browser workflow reported no JavaScript errors.
 
 The bounded hosted load check sustained **50 authenticated sessions and 50 authorized realtime subscriptions**, then executed **150 requests, including 24 idempotent registration replays**, with **0 unexpected errors**, **278 ms p50** and **539 ms p95**. See [docs/load-results.json](docs/load-results.json). This uses seven repeated demo identities, distinct Auth sessions and a small dataset; it is not a sustained-load guarantee. Initial rapid session preparation hit Supabase's Auth rate limiter; successful sessions were cached privately and remaining sessions were prepared without weakening that protection.
 
-The production dependency audit reports no vulnerabilities after upgrading Zod to the patched release. The Supabase security advisor reports no table-exposure/RLS issues; its remaining warning concerns optional leaked-password protection. Demo passwords are generated randomly, and public signup is disabled. Development dependency advisories are separate from this runtime audit.
+The production dependency audit reports no vulnerabilities after upgrading Zod to the patched release. The Supabase security advisor reports no table-exposure/RLS issues; its remaining warning concerns optional [leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Demo passwords are generated randomly, and public signup is disabled. Development dependency advisories are separate from this runtime audit.
 
 ## Branding and font limitations
 
