@@ -13,6 +13,7 @@ src/app/fonts/*.otf
 docs/licenses/*.pdf
 public/fonts/*.otf
 *.local.json
+next-env.d.ts
 
 .vercel
 .env*

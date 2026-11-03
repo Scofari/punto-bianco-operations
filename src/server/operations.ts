@@ -4,8 +4,12 @@ import { notify } from './visits';
 
 export async function listAccommodations(actor: Staff, page: number) {
   requireRole(actor, ['admin', 'accommodation', 'accountant', 'quality']);
+  const columns =
+    actor.role === 'accountant'
+      ? 'a.id,a.visit_id,a.apartment_type,a.is_free,a.free_nights,a.status,a.version,NULL::text AS reservation_reference,NULL::text AS address'
+      : 'a.*';
   const r = await database().query(
-    `SELECT a.*,v.first_name,v.last_name,v.arrival,v.departure,s.display_name AS coordinator_name,count(*) OVER()::int AS total_count
+    `SELECT ${columns},v.first_name,v.last_name,v.arrival,v.departure,s.display_name AS coordinator_name,count(*) OVER()::int AS total_count
     FROM private.accommodation_requests a JOIN private.visits v ON v.id=a.visit_id JOIN private.staff_profiles s ON s.id=v.coordinator_id
     ORDER BY (a.status='unprocessed') DESC,v.arrival,a.id LIMIT 25 OFFSET $1`,
     [(page - 1) * 25],
@@ -74,6 +78,7 @@ export async function listTransfers(actor: Staff, from: string, to: string) {
   return { items: r.rows };
 }
 export async function listStaff(actor: Staff) {
+  requireRole(actor, ['admin', 'coordinator']);
   const r = await database().query(
     `SELECT id,display_name,role,active,version FROM private.staff_profiles WHERE ${actor.role === 'admin' ? 'true' : "active AND role IN ('admin','coordinator')"} ORDER BY display_name`,
   );

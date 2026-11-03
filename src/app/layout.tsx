@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: 'Punto Bianco · Coordonarea vizitelor',
   description: 'Platformă internă de coordonare a vizitelor pacienților Punto Bianco.',
   robots: { index: false, follow: false },
+  icons: { icon: '/punto-bianco-logo.png' },
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

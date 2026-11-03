@@ -633,7 +633,7 @@ export function Dashboard({ section, staff }: { section: keyof typeof ro.nav; st
                         {v.is_free ? `${v.free_nights} nopți gratuite` : 'Cazare contra cost'}
                       </span>
                     </div>
-                    {v.status === 'reserved' && (
+                    {v.status === 'reserved' && (v.address || v.reservation_reference) && (
                       <div className="reservation-details">
                         <strong>{v.reservation_reference}</strong>
                         <span>{v.address}</span>

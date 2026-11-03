@@ -75,6 +75,17 @@ try {
         `${role}: ${resource} permission`,
       );
     }
+  for (const role of ['driver', 'accountant', 'accommodation', 'backoffice', 'quality'] as const)
+    check(
+      (await sessions[role].get('/api/v1/staff')).status() === 403,
+      `${role} cannot access the coordinator directory`,
+    );
+  const accounting = (await (await sessions.accountant.get('/api/v1/accommodations')).json())
+    .items as AccommodationRow[];
+  check(
+    accounting.every((a) => a.address === null && a.reservation_reference === null),
+    'accounting responses omit reservation address and reference',
+  );
   const staff = (await (await sessions.admin.get('/api/v1/staff')).json()).items as StaffRow[];
   const coordinator = staff.find((s) => s.role === 'coordinator')!;
   const now = new Date();
