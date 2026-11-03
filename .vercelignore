@@ -1,0 +1,10 @@
+node_modules
+.git
+.env*
+credentials.local.md
+test-results
+playwright-report
+.next
+docs/licenses
+src/app/fonts
+*.local.json

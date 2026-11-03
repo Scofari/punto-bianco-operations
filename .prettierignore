@@ -1,0 +1,7 @@
+node_modules
+.next
+.vercel
+package-lock.json
+credentials.local.md
+*.local.json
+docs/screenshots

@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-03T23:10:25.732Z",
+  "target": "https://punto-bianco-operations.vercel.app",
+  "authenticatedSessions": 50,
+  "realtimeSubscriptions": 50,
+  "realtimeEventsObserved": 29,
+  "requests": 150,
+  "writes": 24,
+  "unexpectedErrors": 0,
+  "errorPercent": 0,
+  "p50Ms": 278,
+  "p95Ms": 539,
+  "maxMs": 906,
+  "limitations": "Three rounds at 50 concurrent sessions; repeated seven demo identities with distinct Auth sessions; synthetic small dataset; writes are idempotent registration replays. Not a soak test or a guarantee under sustained production traffic."
+}

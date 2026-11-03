@@ -11,3 +11,8 @@ credentials.local.md
 
 src/app/fonts/*.otf
 docs/licenses/*.pdf
+public/fonts/*.otf
+*.local.json
+
+.vercel
+.env*
