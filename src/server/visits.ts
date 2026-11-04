@@ -194,26 +194,34 @@ export async function updateVisit(actor: Staff, id: string, p: PersonInput, vers
     return { id, lodgingReset: lodgingChanged && a.status === 'reserved' };
   });
 }
-export async function listVisits(actor: Staff, search: string, page: number, id?: string) {
+export async function listVisits(
+  actor: Staff,
+  search: string,
+  page: number,
+  id?: string,
+  status = 'all',
+) {
   requireRole(actor, ['admin', 'coordinator', 'backoffice', 'quality']);
   const values: unknown[] = [
     actor.role === 'coordinator' ? actor.id : null,
     `%${search}%`,
     id ?? null,
-    25,
-    (page - 1) * 25,
+    status,
+    id ? 0 : (page - 1) * 25,
   ];
   const result = await database().query(
-    `SELECT v.*,s.display_name AS coordinator_name,t.description AS treatment,
+    `WITH matching AS (SELECT v.*,s.display_name AS coordinator_name,t.description AS treatment,
     b.id AS task_id,b.status AS task_status,b.version AS task_version,a.id AS accommodation_id,a.apartment_type,a.is_free AS accommodation_free,a.free_nights,a.status AS accommodation_status,a.reservation_reference,a.address,
-    c.first_name AS companion_first_name,c.last_name AS companion_last_name,c.treatment_visit_id AS companion_visit_id,
-    count(*) OVER()::int AS total_count
+    COALESCE(cv.first_name,c.first_name) AS companion_first_name,COALESCE(cv.last_name,c.last_name) AS companion_last_name,c.treatment_visit_id AS companion_visit_id
     FROM private.visits v JOIN private.staff_profiles s ON s.id=v.coordinator_id JOIN private.treatments t ON t.visit_id=v.id
     JOIN private.backoffice_tasks b ON b.visit_id=v.id JOIN private.accommodation_requests a ON a.visit_id=v.id
     LEFT JOIN private.companions c ON c.primary_visit_id=v.id
+    LEFT JOIN private.visits cv ON cv.id=c.treatment_visit_id
     WHERE ($1::uuid IS NULL OR v.coordinator_id=$1) AND (v.first_name || ' ' || v.last_name ILIKE $2) AND ($3::uuid IS NULL OR v.id=$3)
-    ORDER BY v.arrival,v.id LIMIT $4 OFFSET $5`,
+    AND ($4='all' OR b.status=$4))
+    SELECT (SELECT count(*)::int FROM matching) AS total,
+    COALESCE((SELECT json_agg(records) FROM (SELECT * FROM matching ORDER BY arrival,id LIMIT 25 OFFSET $5) records),'[]'::json) AS items`,
     values,
   );
-  return { items: result.rows, page, total: result.rows[0]?.total_count ?? 0 };
+  return { ...result.rows[0], page: id ? 1 : page };
 }

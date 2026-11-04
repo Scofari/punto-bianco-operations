@@ -1,31 +1,23 @@
 import { chromium, expect } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 const base = process.env.TEST_BASE_URL || 'http://localhost:3000';
-const saved = JSON.parse(await readFile('.test-sessions.local.json', 'utf8'));
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const contexts = [];
 const errors = [];
 async function open(role, path, width = 1440) {
-  const session = saved.find((s) => s.role === role);
-  if (!session) throw Error(`Missing cached ${role} session; run the load preparation first.`);
   const context = await browser.newContext({
     viewport: { width, height: 1000 },
     reducedMotion: 'reduce',
+    timezoneId: 'Pacific/Honolulu',
   });
   contexts.push(context);
-  await context.addCookies(
-    Object.entries(session.jar).map(([name, value]) => ({
-      name,
-      value,
-      domain: new URL(base).hostname,
-      path: '/',
-      httpOnly: false,
-      secure: base.startsWith('https:'),
-    })),
-  );
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(base + '/login');
+  await page.getByLabel('Adresa de email').fill(`${role}@demo.puntobianco.test`);
+  await page.locator('[name=password]').fill(process.env.DEMO_PASSWORD);
+  await page.getByRole('button', { name: 'Conectare', exact: true }).click();
+  await page.waitForURL('**/overview');
   await page.goto(base + path);
   return page;
 }
@@ -65,11 +57,13 @@ try {
       await coordinator.screenshot({ path: 'docs/screenshots/form-failure.png', fullPage: true });
       throw error;
     });
+  await coordinator.getByRole('textbox', { name: 'Caută pacient', exact: true }).fill(firstName);
   await expect(coordinator.getByText(firstName + ' PacientFictiv', { exact: true })).toBeVisible({
     timeout: 20000,
   });
   console.log('PASS coordinator registers a patient through the 375px form');
   const backoffice = await open('backoffice', '/backoffice');
+  await backoffice.getByRole('textbox', { name: 'Caută pacient', exact: true }).fill(firstName);
   const row = backoffice.getByRole('row').filter({ hasText: firstName });
   await row.getByRole('button', { name: 'Început', exact: true }).click();
   await row.getByRole('button', { name: 'Finalizat', exact: true }).click();
@@ -86,16 +80,30 @@ try {
   await expect(card.getByText('Rezervat', { exact: true })).toBeVisible();
   console.log('PASS accommodation manager reserves the new case through the UI');
   const driver = await open('driver', '/transfers', 375);
+  if (
+    new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'Europe/Chisinau' }).format(
+      new Date(),
+    ) === 'Sunday'
+  )
+    await driver.getByRole('button', { name: 'Săptămâna următoare' }).click();
   await expect(
-    driver.getByRole('heading', { name: `Sosire – ${firstName} PacientFictiv`, exact: true }),
+    driver.getByRole('heading', { name: `Sosire 14:30 – ${firstName} PacientFictiv`, exact: true }),
   ).toBeVisible();
   await driver.reload();
+  if (
+    new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'Europe/Chisinau' }).format(
+      new Date(),
+    ) === 'Sunday'
+  )
+    await driver.getByRole('button', { name: 'Săptămâna următoare' }).click();
   await expect(
-    driver.getByRole('heading', { name: `Sosire – ${firstName} PacientFictiv`, exact: true }),
+    driver.getByRole('heading', { name: `Sosire 14:30 – ${firstName} PacientFictiv`, exact: true }),
   ).toBeVisible();
   await driver.getByRole('button', { name: 'Notificări', exact: true }).click();
   await expect(driver.getByRole('heading', { name: 'Transferuri', exact: true })).toBeVisible();
   await expect(driver.locator('.notification-item').first()).toBeVisible();
+  if (await driver.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+    throw Error('Mobile transfer calendar overflows the document');
   console.log('PASS driver sees the transfer and persisted notifications after reload');
   await driver.getByRole('button', { name: 'Închide notificările', exact: true }).click();
   await driver.screenshot({ path: 'docs/screenshots/transfers-mobile.png', fullPage: true });
@@ -104,6 +112,10 @@ try {
   await expect(
     accountant.getByRole('button', { name: 'Rezervă cazarea', exact: true }),
   ).toHaveCount(0);
+  await accountant.goto(base + '/patients');
+  await expect(
+    accountant.getByRole('heading', { name: 'Acces restricționat', exact: true }),
+  ).toBeVisible();
   const quality = await open('quality', '/patients');
   await expect(quality.getByRole('heading', { name: 'Pacienți', exact: true })).toBeVisible();
   await expect(

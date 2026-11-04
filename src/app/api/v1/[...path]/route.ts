@@ -29,6 +29,10 @@ async function route(request: Request, context: Context) {
       .max(10000)
       .parse(url.searchParams.get('page') ?? 1);
     if (request.method === 'GET') {
+      const search = z
+        .string()
+        .max(100)
+        .parse(url.searchParams.get('search') ?? '');
       if (resource === 'me' && !id) return ok({ staff: actor });
       if (resource === 'staff' && !id) return ok(await listStaff(actor));
       if (resource === 'visits' || resource === 'backoffice') {
@@ -36,17 +40,27 @@ async function route(request: Request, context: Context) {
         if (resource === 'backoffice') requireRole(actor, ['admin', 'backoffice', 'quality']);
         const result = await listVisits(
           actor,
-          z
-            .string()
-            .max(100)
-            .parse(url.searchParams.get('search') ?? ''),
+          search,
           page,
           id,
+          z
+            .enum(['all', 'new', 'in_progress', 'completed'])
+            .parse(url.searchParams.get('status') ?? 'all'),
         );
         if (id && !result.items.length) throw new AppError(404, 'Vizita nu a fost găsită.');
         return ok(result);
       }
-      if (resource === 'accommodations' && !id) return ok(await listAccommodations(actor, page));
+      if (resource === 'accommodations' && !id)
+        return ok(
+          await listAccommodations(
+            actor,
+            page,
+            search,
+            z
+              .enum(['all', 'unprocessed', 'reserved'])
+              .parse(url.searchParams.get('status') ?? 'all'),
+          ),
+        );
       if (resource === 'transfers' && !id) {
         const from = z.iso.datetime({ offset: true }).parse(url.searchParams.get('from'));
         const to = z.iso.datetime({ offset: true }).parse(url.searchParams.get('to'));

@@ -1,7 +1,6 @@
 'use client';
-import { addDays, startOfWeek } from 'date-fns';
 import { ArrowDownToLine, ArrowUpFromLine, ChevronLeft, ChevronRight } from 'lucide-react';
-import { localDate } from '@/lib/dates';
+import { localDate, clinicWeekStart, shiftCalendarDays } from '@/lib/dates';
 import type { TransferRow } from '@/lib/types';
 export function TransferCalendar({
   transfers,
@@ -12,7 +11,7 @@ export function TransferCalendar({
   week: Date;
   setWeek: (d: Date) => void;
 }) {
-  const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
+  const days = Array.from({ length: 7 }, (_, i) => shiftCalendarDays(week, i));
   return (
     <section className="panel">
       <div className="panel-heading calendar-header">
@@ -21,26 +20,23 @@ export function TransferCalendar({
           <p>Toate orele sunt afișate în fusul orar Chișinău.</p>
         </div>
         <div className="calendar-controls">
-          <button
-            className="button secondary compact"
-            onClick={() => setWeek(startOfWeek(new Date(), { weekStartsOn: 1 }))}
-          >
+          <button className="button secondary compact" onClick={() => setWeek(clinicWeekStart())}>
             Astăzi
           </button>
           <button
             className="icon-button"
             aria-label="Săptămâna anterioară"
-            onClick={() => setWeek(addDays(week, -7))}
+            onClick={() => setWeek(shiftCalendarDays(week, -7))}
           >
             <ChevronLeft size={17} />
           </button>
           <span>
-            {localDate(week, 'dd MMM')} – {localDate(addDays(week, 6), 'dd MMM yyyy')}
+            {localDate(week, 'dd MMM')} – {localDate(shiftCalendarDays(week, 6), 'dd MMM yyyy')}
           </span>
           <button
             className="icon-button"
             aria-label="Săptămâna următoare"
-            onClick={() => setWeek(addDays(week, 7))}
+            onClick={() => setWeek(shiftCalendarDays(week, 7))}
           >
             <ChevronRight size={17} />
           </button>
@@ -85,7 +81,8 @@ export function TransferCalendar({
                       <strong>{localDate(t.scheduled_at, 'HH:mm')}</strong>
                     </span>
                     <h3>
-                      {t.direction === 'arrival' ? 'Sosire' : 'Plecare'} – {t.passengers}
+                      {t.direction === 'arrival' ? 'Sosire' : 'Plecare'}{' '}
+                      {localDate(t.scheduled_at, 'HH:mm')} – {t.passengers}
                       {t.companions ? `, ${t.companions}` : ''}
                     </h3>
                     <small>{t.is_free ? 'Transfer gratuit' : 'Contra cost'}</small>

@@ -24,10 +24,9 @@ import {
   X,
   ClipboardList,
 } from 'lucide-react';
-import { addDays, startOfWeek } from 'date-fns';
 import { ro } from '@/lib/ro';
 import { api } from '@/lib/api';
-import { localDate, toUtc } from '@/lib/dates';
+import { localDate, toUtc, clinicWeekStart, shiftCalendarDays } from '@/lib/dates';
 import type { Staff } from '@/lib/domain';
 import type { VisitRow, AccommodationRow, TransferRow, StaffRow, PageResult } from '@/lib/types';
 import { VisitForm } from '@/features/visits/visit-form';
@@ -63,7 +62,7 @@ export function Dashboard({ section, staff }: { section: keyof typeof ro.nav; st
   const [detail, setDetail] = useState<VisitRow>();
   const [reservation, setReservation] = useState<AccommodationRow>();
   const [busy, setBusy] = useState('');
-  const [week, setWeek] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [week, setWeek] = useState(() => clinicWeekStart());
   const canCreate = ['admin', 'coordinator'].includes(staff.role);
   const canPatients = ['admin', 'coordinator', 'backoffice', 'quality'].includes(staff.role);
   const canLodging = ['admin', 'accommodation', 'accountant', 'quality'].includes(staff.role);
@@ -105,12 +104,12 @@ export function Dashboard({ section, staff }: { section: keyof typeof ro.nav; st
       setError('');
       try {
         const from = toUtc(`${localDate(week, 'yyyy-MM-dd')}T00:00`);
-        const to = toUtc(`${localDate(addDays(week, 7), 'yyyy-MM-dd')}T00:00`);
+        const to = toUtc(`${localDate(shiftCalendarDays(week, 7), 'yyyy-MM-dd')}T00:00`);
         const tasks: Promise<void>[] = [];
         if (canPatients && ['overview', 'patients', 'backoffice'].includes(section))
           tasks.push(
             api<PageResult<VisitRow>>(
-              `${section === 'backoffice' ? 'backoffice' : 'visits'}?page=${page}&search=${encodeURIComponent(query)}`,
+              `${section === 'backoffice' ? 'backoffice' : 'visits'}?page=${page}&search=${encodeURIComponent(query)}&status=${filter}`,
             ).then((r) => {
               if (active) {
                 setVisits(r.items);
@@ -120,7 +119,9 @@ export function Dashboard({ section, staff }: { section: keyof typeof ro.nav; st
           );
         if (canLodging && ['overview', 'accommodation'].includes(section))
           tasks.push(
-            api<PageResult<AccommodationRow>>(`accommodations?page=${page}`).then((r) => {
+            api<PageResult<AccommodationRow>>(
+              `accommodations?page=${page}&search=${encodeURIComponent(query)}&status=${['unprocessed', 'reserved'].includes(filter) ? filter : 'all'}`,
+            ).then((r) => {
               if (active) {
                 setLodgings(r.items);
                 if (section === 'accommodation' || !canPatients) setTotal(r.total);
@@ -166,6 +167,7 @@ export function Dashboard({ section, staff }: { section: keyof typeof ro.nav; st
     denied,
     page,
     query,
+    filter,
     refresh,
     week,
   ]);
@@ -228,12 +230,8 @@ export function Dashboard({ section, staff }: { section: keyof typeof ro.nav; st
       setBusy('');
     }
   }
-  const filteredVisits = visits.filter((v) => filter === 'all' || v.task_status === filter);
-  const filteredLodgings = lodgings.filter(
-    (v) =>
-      (filter === 'all' || v.status === filter) &&
-      name(v).toLocaleLowerCase('ro').includes(search.toLocaleLowerCase('ro')),
-  );
+  const filteredVisits = visits;
+  const filteredLodgings = lodgings;
   const dateLabel = new Intl.DateTimeFormat('ro-RO', {
     day: 'numeric',
     month: 'long',
@@ -442,7 +440,10 @@ export function Dashboard({ section, staff }: { section: keyof typeof ro.nav; st
                     <button
                       key={v}
                       className={filter === v ? 'selected' : ''}
-                      onClick={() => setFilter(v)}
+                      onClick={() => {
+                        setFilter(v);
+                        setPage(1);
+                      }}
                     >
                       {t}
                       {v === 'all' && <span>{visits.length}</span>}
@@ -592,7 +593,10 @@ export function Dashboard({ section, staff }: { section: keyof typeof ro.nav; st
                     <button
                       className={filter === v ? 'selected' : ''}
                       key={v}
-                      onClick={() => setFilter(v)}
+                      onClick={() => {
+                        setFilter(v);
+                        setPage(1);
+                      }}
                     >
                       {t}
                     </button>
@@ -970,7 +974,6 @@ function Pagination({
     <div className="pagination">
       <span>
         {shown ? `${(page - 1) * 25 + 1}–${(page - 1) * 25 + shown}` : '0'} din {total} înregistrări
-        <span className="pagination-note"> · Filtrele de stare se aplică paginii curente</span>
       </span>
       <div>
         <button

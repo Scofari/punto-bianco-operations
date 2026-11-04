@@ -20,6 +20,14 @@ try {
   await page.getByRole('button', { name: 'Conectare', exact: true }).click();
   await page.waitForURL('**/overview');
   await page.getByRole('button', { name: 'Înregistrează pacient', exact: true }).click();
+  const coordinatorOptions = await page
+    .locator('[name="patient.coordinatorId"] option')
+    .allTextContents();
+  assert.equal(
+    coordinatorOptions.length,
+    2,
+    'Admin sees only the two active coordinator-eligible staff',
+  );
   const arrival = page.locator('[name="patient.arrival"]');
   const departure = page.locator('[name="patient.departure"]');
   await arrival.fill('2026-11-10T12:00');

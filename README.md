@@ -64,11 +64,12 @@ npm run test:integration
 npm run test:access
 npm run test:load
 npm run test:browser
+node --env-file=.env.local tests/form-validation.mjs
 ```
 
-Integration commands use `.env.local` and fictional records in the assessment database. Set `TEST_BASE_URL` to the deployment to run against hosting. The load check prepares an ignored, temporary Auth-session cache used by the browser workflow; it must not be published. Chrome must be installed for browser checks.
+Integration commands use `.env.local` and fictional records in the assessment database. Set `TEST_BASE_URL` to the deployment to run against hosting. The load check prepares an ignored, temporary Auth-session cache; it must not be published. The browser workflow signs into all seven roles independently and does not depend on that cache. Chrome must be installed for browser checks.
 
-Recorded results: six domain tests, 61 HTTP workflow checks both locally and on Vercel, direct Data API/RLS checks, and the complete seven-role browser workflow. Desktop and 375px mobile views were visually inspected. The mobile document has no horizontal overflow, and the browser workflow reported no JavaScript errors.
+The original verification recorded six domain tests and 61 HTTP workflow checks locally and on Vercel. The requirements re-audit expands this to ten domain tests and 84 HTTP checks, including global filtering, empty-page totals, every read-only mutation boundary, coordinator ownership, and companions with/without treatment. Direct Data API/RLS checks and the seven-role browser workflow also pass. The browser workflow runs from a simulated Hawaii timezone; calendar dates remain in Chișinău. Desktop and 375px mobile views were inspected, with no mobile document overflow or JavaScript errors. See [the complete requirement audit](docs/ASSESSMENT-AUDIT.md) for the final evidence and remaining gaps.
 
 The bounded hosted load check sustained **50 authenticated sessions and 50 authorized realtime subscriptions**, then executed **150 requests, including 24 idempotent registration replays**, with **0 unexpected errors**, **278 ms p50** and **539 ms p95**. See [docs/load-results.json](docs/load-results.json). This uses seven repeated demo identities, distinct Auth sessions and a small dataset; it is not a sustained-load guarantee. Initial rapid session preparation hit Supabase's Auth rate limiter; successful sessions were cached privately and remaining sessions were prepared without weakening that protection.
 
@@ -84,9 +85,11 @@ The original ExtraBold OTF is embedded through `@font-face`, with its actual 800
 
 Raw font files and the supplied license PDF are ignored by Git. To restore the licensed typography after cloning, obtain the authorized archive from https://www.fontfabric.com/fonts/muller/ and place `Commercial/OTF/MullerDemo-ExtraBold.otf` at `public/fonts/MullerDemo-ExtraBold.otf`. The app builds with a system fallback when this file is absent. The current CLI deployment includes the authorized font as an embedded application asset. `.vercelignore` includes that local asset while excluding secrets and development caches. A future Git-only deployment without restoring the font will use the fallback.
 
+The later `muller (1).zip` contains only `Mller.ttf`, a non-variable 400-weight font named “Müller”, with a 2013 placeholder copyright. It lacks Romanian `ă/Ă`, `ș/Ș` and `ț/Ț`; its two text files provide no web-embedding license. It is not substituted for Fontfabric's full Muller family or deployed. A licensed full family with Romanian glyphs is still needed to satisfy that requirement completely.
+
 ## Tradeoffs and next improvements
 
-This delivers the assessment workflow, not a complete dental practice management system. Exact pricing, invoices, medical attachments, apartment inventory/conflict detection, driver assignment, cancellation, Google Calendar synchronization and live Bitrix24 integration are not implemented. Status tabs filter the current paginated result; metrics explicitly distinguish total records from counts in the displayed page. Companion relationships are created at registration; subsequent edits operate on each linked visit independently.
+This delivers the assessment workflow, not a complete dental practice management system. Exact pricing, invoices, medical attachments, apartment inventory/conflict detection, driver assignment, cancellation, Google Calendar synchronization and live Bitrix24 integration are not implemented. Search and status filtering apply to all matching records before pagination; dashboard metrics explicitly distinguish total records from counts in the displayed page. Companion relationships are created at registration; subsequent edits operate on each linked visit independently, and the primary visit reflects a treated companion's current name.
 
 Next priorities would be apartment availability conflicts, cancellation/rescheduling, flight details, overdue-task reminders, scoped integration tokens, fuller audit history, automated accessibility auditing and complete language-dictionary extraction. The API boundary supports those additions without moving authorization into the browser.
 

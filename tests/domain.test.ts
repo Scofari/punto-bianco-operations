@@ -9,8 +9,9 @@ import {
   visitSchema,
   type Staff,
   roles,
+  apartmentTypes,
 } from '../src/lib/domain';
-import { toUtc, localDate, stayNights } from '../src/lib/dates';
+import { toUtc, localDate, stayNights, clinicWeekStart, shiftCalendarDays } from '../src/lib/dates';
 const person = {
   firstName: 'Andrei',
   lastName: 'Munteanu',
@@ -80,6 +81,11 @@ test('one-way and round-trip directions do not invent extra legs', () => {
   assert.deepEqual(transferDirections('departure'), ['departure']);
   assert.deepEqual(transferDirections('round_trip'), ['arrival', 'departure']);
 });
+test('all four required apartment categories validate and unknown categories fail', () => {
+  for (const apartmentType of apartmentTypes)
+    assert.equal(personSchema.safeParse({ ...person, apartmentType }).success, true);
+  assert.equal(personSchema.safeParse({ ...person, apartmentType: 'unknown' }).success, false);
+});
 test('back-office workflow cannot skip start or reopen completed work', () => {
   assert.equal(nextTaskStatus('new', 'completed'), false);
   assert.equal(nextTaskStatus('new', 'in_progress'), true);
@@ -108,4 +114,13 @@ test('clinic-local date conversion respects winter and summer timezone offsets',
   assert.equal(toUtc('2026-11-03T14:30'), '2026-11-03T12:30:00.000Z');
   assert.equal(toUtc('2026-07-03T14:30'), '2026-07-03T11:30:00.000Z');
   assert.equal(localDate('2026-11-03T12:30:00Z', 'HH:mm'), '14:30');
+});
+test('clinic weeks stay on Monday and contain seven calendar days across DST', () => {
+  assert.equal(localDate(clinicWeekStart('2026-11-08T23:30:00Z'), 'yyyy-MM-dd'), '2026-11-09');
+  assert.equal(localDate(clinicWeekStart('2026-11-08T21:30:00Z'), 'yyyy-MM-dd'), '2026-11-02');
+  for (const instant of ['2026-03-29T12:00:00Z', '2026-10-25T12:00:00Z']) {
+    const week = clinicWeekStart(instant);
+    assert.equal(week.getUTCDay(), 1);
+    assert.equal(stayNights(week.toISOString(), shiftCalendarDays(week, 7).toISOString()), 7);
+  }
 });

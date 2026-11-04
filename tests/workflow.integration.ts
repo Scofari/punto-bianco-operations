@@ -88,6 +88,7 @@ try {
   );
   const staff = (await (await sessions.admin.get('/api/v1/staff')).json()).items as StaffRow[];
   const coordinator = staff.find((s) => s.role === 'coordinator')!;
+  const adminStaff = staff.find((s) => s.role === 'admin')!;
   const now = new Date();
   const arrival = new Date(now.getTime() + 86400000);
   arrival.setUTCHours(12, 30, 0, 0);
@@ -184,10 +185,21 @@ try {
       `${role} cannot edit visits`,
     );
   const lodgingPage = (await (
-    await sessions.accommodation.get('/api/v1/accommodations')
+    await sessions.accommodation.get(`/api/v1/accommodations?search=${suffix}`)
   ).json()) as PageResult<AccommodationRow>;
   const lodging = lodgingPage.items.find((a) => a.visit_id === first.id)!;
   check(!!lodging, 'lodging request is persisted');
+  check(
+    lodgingPage.total === 2 && lodgingPage.items.length === 2,
+    'lodging search applies before pagination',
+  );
+  const emptyLodgingPage = await (
+    await sessions.accommodation.get(`/api/v1/accommodations?search=${suffix}&page=2`)
+  ).json();
+  check(
+    emptyLodgingPage.total === 2 && emptyLodgingPage.items.length === 0,
+    'empty lodging pages retain accurate total',
+  );
   check(
     !JSON.stringify(lodgingPage).includes(patient.treatment) && !('treatment' in lodging),
     'accommodation API excludes clinical treatment',
@@ -204,6 +216,51 @@ try {
     ).status() === 200,
     'accommodation manager reserves lodging',
   );
+  const reservedSearch = await (
+    await sessions.accommodation.get(`/api/v1/accommodations?search=${suffix}&status=reserved`)
+  ).json();
+  check(
+    reservedSearch.total === 1 && reservedSearch.items[0].visit_id === first.id,
+    'lodging status and search combine across all records',
+  );
+  const completedSearch = await (
+    await sessions.backoffice.get(`/api/v1/backoffice?search=${suffix}&status=completed`)
+  ).json();
+  check(
+    completedSearch.total === 1 && completedSearch.items[0].id === first.id,
+    'back-office status filters apply before pagination',
+  );
+  const emptyVisitsPage = await (
+    await sessions.coordinator.get(`/api/v1/visits?search=${suffix}&page=2`)
+  ).json();
+  check(
+    emptyVisitsPage.total === 2 && emptyVisitsPage.items.length === 0,
+    'empty visit pages retain accurate total',
+  );
+  for (const role of ['accountant', 'quality'] as const) {
+    for (const [path, data] of [
+      [`backoffice/${first.task_id}`, { status: 'completed', version: taskVersion + 1 }],
+      [
+        `accommodations/${lodging.id}`,
+        { reference: 'DENIED', address: 'Fictional address', version: lodging.version + 1 },
+      ],
+      [`staff/${coordinator.id}`, { role: 'admin', version: coordinator.version }],
+    ] as const) {
+      check(
+        (await sessions[role].patch(`/api/v1/${path}`, { data })).status() === 403,
+        `${role} cannot mutate ${path.split('/')[0]}`,
+      );
+    }
+    check(
+      (
+        await sessions[role].post('/api/v1/visits', {
+          headers: { 'Idempotency-Key': randomUUID() },
+          data: payload,
+        })
+      ).status() === 403,
+      `${role} cannot create visits`,
+    );
+  }
   check(
     (
       await sessions.accountant.patch(`/api/v1/accommodations/${lodging.id}`, {
@@ -266,6 +323,108 @@ try {
   check(
     updated.accommodation_status === 'unprocessed' && updated.address === null,
     'stale reservation details are cleared',
+  );
+  const linked = (
+    await (await sessions.coordinator.get(`/api/v1/visits/${first.companion_visit_id}`)).json()
+  ).items[0];
+  const renamedCompanion = { ...companion, firstName: `Renamed${suffix}` };
+  check(
+    (
+      await sessions.coordinator.patch(`/api/v1/visits/${linked.id}`, {
+        data: { patient: renamedCompanion, version: linked.version },
+      })
+    ).status() === 200,
+    'treated companion can be edited independently',
+  );
+  const primaryAfterRename = (
+    await (await sessions.coordinator.get(`/api/v1/visits/${first.id}`)).json()
+  ).items[0];
+  check(
+    primaryAfterRename.companion_first_name === renamedCompanion.firstName,
+    'linked companion name stays current on primary visit',
+  );
+  const oneWay = {
+    ...changed,
+    apartmentType: 'two_bed' as const,
+    accommodationFree: false,
+    freeNights: 0,
+    transfer: 'departure' as const,
+    transferFree: false,
+  };
+  check(
+    (
+      await sessions.coordinator.patch(`/api/v1/visits/${first.id}`, {
+        data: { patient: oneWay, version: updated.version },
+      })
+    ).status() === 200,
+    'paid lodging and paid departure-only transfer can be saved',
+  );
+  const oneWayTransfers = (
+    await (
+      await sessions.driver.get(
+        `/api/v1/transfers?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      )
+    ).json()
+  ).items.filter((t: TransferRow) => t.passengers.includes(patient.firstName));
+  check(
+    oneWayTransfers.length === 1 &&
+      oneWayTransfers[0].direction === 'departure' &&
+      !oneWayTransfers[0].is_free,
+    'one-way selection creates exactly the requested paid leg',
+  );
+  for (const [resource, status] of [
+    ['backoffice', 'reserved'],
+    ['accommodations', 'completed'],
+  ])
+    check(
+      (await sessions.admin.get(`/api/v1/${resource}?status=${status}`)).status() === 422,
+      'invalid status filters are rejected',
+    );
+  const privatePatient = {
+    ...patient,
+    firstName: `AdminOnly${suffix}`,
+    coordinatorId: adminStaff.id,
+    accommodationFree: false,
+    freeNights: 0,
+    transfer: 'arrival' as const,
+    transferFree: false,
+  };
+  const privateCreated = await sessions.admin.post('/api/v1/visits', {
+    headers: { 'Idempotency-Key': randomUUID() },
+    data: {
+      patient: privatePatient,
+      companion: { hasTreatment: false, firstName: 'CompanionFictiv', lastName: suffix },
+    },
+  });
+  check(
+    privateCreated.status() === 201,
+    'admin registers a companion without treatment and paid arrival-only transfer',
+  );
+  const privateId = (await privateCreated.json()).id;
+  check(
+    (await sessions.coordinator.get(`/api/v1/visits/${privateId}`)).status() === 404,
+    'coordinator cannot read another coordinator assignment',
+  );
+  check(
+    (
+      await sessions.coordinator.patch(`/api/v1/visits/${privateId}`, {
+        data: { patient: privatePatient, version: 1 },
+      })
+    ).status() === 403,
+    'coordinator cannot edit another coordinator assignment',
+  );
+  const plainCompanionTransfers = (
+    await (
+      await sessions.driver.get(
+        `/api/v1/transfers?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      )
+    ).json()
+  ).items.filter((t: TransferRow) => t.passengers.includes(privatePatient.firstName));
+  check(
+    plainCompanionTransfers.length === 1 &&
+      plainCompanionTransfers[0].direction === 'arrival' &&
+      plainCompanionTransfers[0].companions.includes('CompanionFictiv'),
+    'non-treated companion appears on exactly one shared arrival event',
   );
   for (const role of ['backoffice', 'accommodation', 'driver'] as const) {
     const n = await (await sessions[role].get('/api/v1/notifications')).json();

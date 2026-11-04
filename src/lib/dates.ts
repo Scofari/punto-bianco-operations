@@ -4,6 +4,16 @@ export const localDate = (value: string | Date, pattern = 'dd.MM.yyyy HH:mm') =>
   formatInTimeZone(value, TIMEZONE, pattern);
 export const toUtc = (value: string) => fromZonedTime(value, TIMEZONE).toISOString();
 export const today = () => localDate(new Date(), 'yyyy-MM-dd');
+// Use UTC noon as a calendar-date carrier; never use the viewer's timezone for clinic weeks.
+export function shiftCalendarDays(value: Date, days: number) {
+  const shifted = new Date(value);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return shifted;
+}
+export function clinicWeekStart(value: string | Date = new Date()) {
+  const day = new Date(`${localDate(value, 'yyyy-MM-dd')}T12:00:00Z`);
+  return shiftCalendarDays(day, -((day.getUTCDay() + 6) % 7));
+}
 export function stayNights(arrival: string, departure: string) {
   if (!Number.isFinite(Date.parse(arrival)) || !Number.isFinite(Date.parse(departure))) return 0;
   const start = localDate(arrival, 'yyyy-MM-dd');

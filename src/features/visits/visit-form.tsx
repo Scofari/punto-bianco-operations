@@ -80,7 +80,12 @@ function PersonFields({
             required
           >
             {coordinators
-              .filter((c) => staff.role === 'admin' || c.id === staff.id)
+              .filter(
+                (c) =>
+                  c.active &&
+                  ['admin', 'coordinator'].includes(c.role) &&
+                  (staff.role === 'admin' || c.id === staff.id),
+              )
               .map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.display_name}

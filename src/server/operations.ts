@@ -2,19 +2,21 @@ import { database, transaction } from './db';
 import { AppError, nextTaskStatus, requireRole, type Staff } from '@/lib/domain';
 import { notify } from './visits';
 
-export async function listAccommodations(actor: Staff, page: number) {
+export async function listAccommodations(actor: Staff, page: number, search = '', status = 'all') {
   requireRole(actor, ['admin', 'accommodation', 'accountant', 'quality']);
   const columns =
     actor.role === 'accountant'
       ? 'a.id,a.visit_id,a.apartment_type,a.is_free,a.free_nights,a.status,a.version,NULL::text AS reservation_reference,NULL::text AS address'
       : 'a.*';
   const r = await database().query(
-    `SELECT ${columns},v.first_name,v.last_name,v.arrival,v.departure,s.display_name AS coordinator_name,count(*) OVER()::int AS total_count
+    `WITH matching AS (SELECT ${columns},v.first_name,v.last_name,v.arrival,v.departure,s.display_name AS coordinator_name
     FROM private.accommodation_requests a JOIN private.visits v ON v.id=a.visit_id JOIN private.staff_profiles s ON s.id=v.coordinator_id
-    ORDER BY (a.status='unprocessed') DESC,v.arrival,a.id LIMIT 25 OFFSET $1`,
-    [(page - 1) * 25],
+    WHERE (v.first_name || ' ' || v.last_name ILIKE $2) AND ($3='all' OR a.status=$3))
+    SELECT (SELECT count(*)::int FROM matching) AS total,
+    COALESCE((SELECT json_agg(records) FROM (SELECT * FROM matching ORDER BY (status='unprocessed') DESC,arrival,id LIMIT 25 OFFSET $1) records),'[]'::json) AS items`,
+    [(page - 1) * 25, `%${search}%`, status],
   );
-  return { items: r.rows, page, total: r.rows[0]?.total_count ?? 0 };
+  return { ...r.rows[0], page };
 }
 export async function transitionTask(actor: Staff, id: string, status: string, version: number) {
   requireRole(actor, ['admin', 'backoffice']);
