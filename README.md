@@ -48,7 +48,7 @@ The application is a modular monolith. Next.js pages and Route Handlers call ser
 - Record versions reject stale edits with `409`. Row locks serialize travel-group edits and back-office claims. Completed back-office work is preserved during visit edits.
 - Changes to accommodation requirements or stay dates reset an existing reservation and clear its stale address/reference. The editor warns about this before saving.
 - UTC timestamps are rendered in `Europe/Chisinau`. Free accommodation requires 1–365 whole nights, capped at the stay's clinic-local calendar nights; paid accommodation requires zero free nights. The form blocks negative/decimal entry and paste, and the API independently validates these rules. Clicking anywhere in arrival/departure fields opens the native picker where supported. One-way transfers explicitly select arrival or departure.
-- Recipient-only RLS protects persisted notifications. Realtime signals refreshes; reconnect, focus and a 30-second fallback poll reload database records. No clinical content is put in notification payloads.
+- Recipient-only RLS protects persisted notifications. Realtime waits for browser authentication before subscribing and reloads persisted records when the database subscription becomes ready. Reconnect, focus and a 30-second fallback poll recover database records. No clinical content is put in notification payloads. The bell's viewed marker is remembered per staff account in the current browser; it is not a cross-device read receipt. Driver alerts are generated for relevant logistics changes and transfer removal, not clinical-only edits or new visits without transfers. Notifications are in-app; email, SMS and operating-system push are not implemented.
 - Browser mutations require a matching Origin. Personalized responses use `private, no-store`; query values are parameterized and unexpected errors do not expose payloads or secrets.
 
 The versioned integration surface is documented in [docs/API.md](docs/API.md). Bitrix24 is not connected: a production integration would require scoped machine authentication, external-ID mapping and webhook delivery/retry handling.
@@ -64,6 +64,7 @@ npm run test:integration
 npm run test:access
 npm run test:load
 npm run test:browser
+npm run test:notifications
 node --env-file=.env.local tests/form-validation.mjs
 ```
 

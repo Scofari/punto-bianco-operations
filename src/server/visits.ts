@@ -117,7 +117,11 @@ export async function createVisit(actor: Staff, input: VisitInput, key: string) 
       );
     }
     await rebuildTransfers(db, group.id);
-    await notify(db, ['driver'], 'transfer_updated', id);
+    if (
+      input.patient.transfer !== 'none' ||
+      (input.companion?.hasTreatment && input.companion.patient.transfer !== 'none')
+    )
+      await notify(db, ['driver'], 'transfer_updated', id);
     await db.query('UPDATE private.idempotency_keys SET visit_id=$3 WHERE actor_id=$1 AND key=$2', [
       actor.id,
       key,
@@ -186,7 +190,16 @@ export async function updateVisit(actor: Staff, id: string, p: PersonInput, vers
       [id, p.apartmentType, p.accommodationFree, p.freeNights, lodgingChanged],
     );
     await rebuildTransfers(db, v.group_id);
-    await notify(db, ['backoffice', 'accommodation', 'driver', 'admin'], 'visit_updated', id);
+    await notify(db, ['backoffice', 'accommodation', 'admin'], 'visit_updated', id);
+    const transferChanged =
+      v.first_name !== p.firstName ||
+      v.last_name !== p.lastName ||
+      new Date(v.arrival).toISOString() !== new Date(p.arrival).toISOString() ||
+      new Date(v.departure).toISOString() !== new Date(p.departure).toISOString() ||
+      v.transfer_option !== p.transfer ||
+      v.transfer_free !== p.transferFree;
+    if (transferChanged && (v.transfer_option !== 'none' || p.transfer !== 'none'))
+      await notify(db, ['driver'], 'transfer_updated', id);
     await db.query(
       'INSERT INTO private.audit_events(actor_id,action,resource_id) VALUES($1,$2,$3)',
       [actor.id, 'visit_updated', id],

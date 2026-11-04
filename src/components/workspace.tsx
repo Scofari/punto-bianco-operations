@@ -54,7 +54,14 @@ export function Workspace({ staff, children }: { staff: Staff; children: React.R
   const [open, setOpen] = useState(false);
   const [bell, setBell] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [seenId, setSeenId] = useState('');
+  const seenKey = `punto:notifications-seen:${staff.id}`;
+  const [seenId, setSeenId] = useState(() => {
+    try {
+      return typeof window === 'undefined' ? '' : window.localStorage.getItem(seenKey) || '';
+    } catch {
+      return '';
+    }
+  });
   useEffect(() => {
     const client = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,6 +82,13 @@ export function Workspace({ staff, children }: { staff: Staff; children: React.R
     void load();
     const channel = client
       .channel(`notifications:${staff.id}`)
+      .on('system', {}, (payload) => {
+        // A socket join can precede the database subscription. Backfill that gap.
+        if (payload.extension === 'postgres_changes' && payload.status === 'ok') {
+          void load();
+          window.dispatchEvent(new Event('punto:refresh'));
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -87,10 +101,19 @@ export function Workspace({ staff, children }: { staff: Staff; children: React.R
           void load();
           window.dispatchEvent(new Event('punto:refresh'));
         },
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') void load();
-      });
+      );
+    void (async () => {
+      // Hydrate the browser session before joining; a reload must not join as anon.
+      const { data } = await client.auth.getSession();
+      if (!mounted || !data.session) return;
+      await client.realtime.setAuth(data.session.access_token);
+      if (mounted)
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') void load();
+        });
+    })().catch(() => {
+      /* Persisted notifications remain available through polling. */
+    });
     const timer = setInterval(() => {
       void load();
     }, 30000);
@@ -203,7 +226,13 @@ export function Workspace({ staff, children }: { staff: Staff; children: React.R
                 aria-expanded={bell}
                 onClick={() => {
                   setBell(!bell);
-                  setSeenId(notifications[0]?.id ?? '');
+                  const latestId = notifications[0]?.id ?? '';
+                  setSeenId(latestId);
+                  try {
+                    window.localStorage.setItem(seenKey, latestId);
+                  } catch {
+                    /* Restricted browser storage: retain viewed state for this session. */
+                  }
                 }}
               >
                 <Bell size={20} />
@@ -234,11 +263,13 @@ export function Workspace({ staff, children }: { staff: Staff; children: React.R
                           <strong>
                             {n.event_type === 'visit_created'
                               ? 'Vizită nouă înregistrată'
-                              : n.event_type === 'accommodation_reserved'
-                                ? 'Cazare rezervată'
-                                : n.event_type === 'backoffice_updated'
-                                  ? 'Caz actualizat'
-                                  : 'Detaliile vizitei au fost actualizate'}
+                              : n.event_type === 'transfer_updated'
+                                ? 'Transferuri actualizate'
+                                : n.event_type === 'accommodation_reserved'
+                                  ? 'Cazare rezervată'
+                                  : n.event_type === 'backoffice_updated'
+                                    ? 'Caz actualizat'
+                                    : 'Detaliile vizitei au fost actualizate'}
                           </strong>
                           <small>{localDate(n.created_at)}</small>
                         </div>

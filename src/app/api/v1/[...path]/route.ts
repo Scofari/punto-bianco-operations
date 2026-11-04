@@ -72,7 +72,7 @@ async function route(request: Request, context: Context) {
         return ok({
           items: (
             await database().query(
-              'SELECT id,event_type,resource_id,created_at FROM public.notifications WHERE recipient_id=$1 ORDER BY created_at DESC LIMIT 30',
+              'SELECT id,event_type,resource_id,created_at FROM public.notifications WHERE recipient_id=$1 ORDER BY created_at DESC,id DESC LIMIT 30',
               [actor.id],
             )
           ).rows,
