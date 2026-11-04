@@ -2619,21 +2619,52 @@ tbody tr:hover {
 .table-scroll {
   position: relative;
 }
-.brand-logo {
-  width: 44px;
-  height: 55px;
-  overflow: hidden;
-  position: relative;
-  display: inline-block;
-  flex-shrink: 0;
+.brand-lockup {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
 }
-.brand-logo img {
-  position: absolute;
-  max-width: none;
-  left: -67px;
-  top: -14px;
-  filter: brightness(0.55) contrast(10);
-  mix-blend-mode: multiply;
+.brand-artwork {
+  display: block;
+  width: 190px;
+  max-width: 100%;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--gray);
+}
+.brand-artwork img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.brand-context {
+  color: #647266;
+  font-size: 8px;
+  letter-spacing: 1.2px;
+}
+.login-brand .brand-artwork {
+  width: 224px;
+  padding: 16px 20px;
+}
+.sidebar {
+  overflow-y: auto;
+}
+.sidebar .brand-lockup {
+  width: 100%;
+}
+.sidebar .brand-artwork {
+  width: 100%;
+  max-width: 190px;
+  padding: 12px 14px;
+}
+.sidebar .workspace-label {
+  margin-top: 28px;
+}
+.sidebar .sidebar-bottom {
+  padding-top: 24px;
 }
 .brand strong {
   font-family: var(--font-muller), Arial, sans-serif;
@@ -2830,6 +2861,10 @@ th,
   }
 }
 @media (max-width: 760px) {
+  .login-brand .brand-artwork {
+    width: 176px;
+    padding: 12px 16px;
+  }
   .sidebar:not(.is-open) {
     visibility: hidden;
     pointer-events: none;

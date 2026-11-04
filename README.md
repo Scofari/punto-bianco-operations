@@ -76,7 +76,7 @@ The production dependency audit reports no vulnerabilities after upgrading Zod t
 
 ## Branding and font limitations
 
-The supplied logo and brand colors `#98D3C3` / `#565555` are used. The logo is displayed from the original provided image, cropped in CSS for the sidebar. Contrast and text sizing were adjusted after visual review.
+The supplied logo and brand colors `#98D3C3` / `#565555` are used. The complete original image is displayed at its natural aspect ratio on a charcoal brand panel. This reverse artwork contains a white circle and a white wordmark; neither is cropped or recolored. The same shared component is used on the login page and sidebar. Contrast and text sizing were adjusted after visual review.
 
 The user supplied the official Fontfabric `Muller.zip`. Its **Commercial** directory contains Muller Demo Thin (100), Muller Demo ExtraBold (800), Muller Narrow Demo Light/Light Italic (300), and Muller Narrow Demo ExtraBold/ExtraBold Italic (800). The included **Free Font EULA 2.2, January 2021**, permits application/web embedding with unlimited pageviews, but restricts redistribution of standalone font files. No non-commercial Trial files are deployed.
 

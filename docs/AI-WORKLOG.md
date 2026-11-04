@@ -53,3 +53,9 @@ A precise hands-on stopwatch was not captured. The evidence supports approximate
 ### With more time
 
 Prioritize accommodation conflict detection, cancellation/rescheduling, explicit flight and driver details, overdue-task reminders, scoped machine authentication for Bitrix24, complete translation extraction, fuller audit views and automated accessibility audits. The current app intentionally uses only fictional data and does not claim to implement real billing, medical document management or a complete clinical records system.
+
+## Branding follow-up — 2026-11-04
+
+The candidate identified a white rectangular patch and missing wordmark in the header. Inspection of the original RGBA PNG on a dark background showed that it contains an intentional opaque white circle and a white wordmark below the tooth. The previous negative-offset crop cut off that wordmark and turned part of the circle into a rectangle. A shared BrandLogo component now displays the entire original artwork on the supplied charcoal brand color, preserving transparency, aspect ratio and all embedded text without modifying the PNG. The duplicated retyped wordmark and faint footer image were removed.
+
+Visual checks passed for desktop/mobile login and desktop/mobile sidebar, with no image clipping, no image color filter, no horizontal mobile overflow and no browser JavaScript errors. TypeScript, lint and production build were checked for this presentation-only change; the database and workflow behavior were unchanged.

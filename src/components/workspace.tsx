@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import Image from 'next/image';
+import { BrandLogo } from './brand-logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -130,13 +130,7 @@ export function Workspace({ staff, children }: { staff: Staff; children: React.R
       )}
       <aside className={`sidebar ${open ? 'is-open' : ''}`}>
         <Link href="/overview" className="brand">
-          <span className="brand-logo">
-            <Image src="/punto-bianco-logo.png" alt="Punto Bianco" width={178} height={102} />
-          </span>
-          <div>
-            <strong>PUNTO BIANCO</strong>
-            <small>COORDONAREA VIZITELOR</small>
-          </div>
+          <BrandLogo showContext />
         </Link>
         <button
           className="mobile-close icon-button"
@@ -290,7 +284,6 @@ export function Workspace({ staff, children }: { staff: Staff; children: React.R
             <ShieldCheck size={13} />
             Date demonstrative · Acces securizat
           </span>
-          <Image src="/punto-bianco-logo.png" alt="" width={42} height={24} />
         </footer>
       </div>
     </div>

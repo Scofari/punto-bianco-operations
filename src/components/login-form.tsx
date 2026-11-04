@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import Image from 'next/image';
+import { BrandLogo } from './brand-logo';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { ArrowRight, ShieldCheck, CalendarDays, HeartPulse, Eye, EyeOff } from 'lucide-react';
@@ -40,13 +40,7 @@ export function LoginForm() {
     <main className="login-page">
       <section className="login-story">
         <div className="brand login-brand">
-          <span className="brand-logo">
-            <Image src="/punto-bianco-logo.png" alt="Punto Bianco" width={178} height={102} />
-          </span>
-          <div>
-            <strong>PUNTO BIANCO</strong>
-            <small>CLINICĂ STOMATOLOGICĂ</small>
-          </div>
+          <BrandLogo />
         </div>
         <div className="story-content">
           <span className="eyebrow">GRIJĂ PENTRU FIECARE DETALIU</span>
