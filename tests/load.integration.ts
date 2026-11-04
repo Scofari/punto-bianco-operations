@@ -23,15 +23,20 @@ try {
   /* First run. */
 }
 const measurements: { status: number; ms: number; method: string }[] = [];
+const available = saved;
+const reusedTokens = new Set<string>();
+saved = [];
 let subscribed = 0,
   events = 0;
 try {
   for (let batch = 0; batch < 10; batch++) {
+    let newSessions = 0;
     const batchResults = await Promise.allSettled(
       Array.from({ length: 5 }, async (_, j) => {
         const i = batch * 5 + j,
           role = roles[i % roles.length];
-        let session = saved[i];
+        let session = available.find((s) => s.role === role && !reusedTokens.has(s.token));
+        if (session) reusedTokens.add(session.token);
         const jar: Record<string, string> = session?.jar ?? {};
         if (!session) {
           const auth = createServerClient(
@@ -62,8 +67,9 @@ try {
             userId: signed.data.user.id,
             expiresAt: signed.data.session.expires_at!,
           };
-          saved[i] = session;
+          newSessions++;
         }
+        saved[i] = session;
         const client = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -85,6 +91,11 @@ try {
     await writeFile('.test-sessions.local.json', JSON.stringify(saved.filter(Boolean)));
     const failed = batchResults.find((r) => r.status === 'rejected');
     if (failed?.status === 'rejected') throw failed.reason;
+    // Prepare sessions below the token endpoint's refill rate, without changing Auth limits.
+    if (newSessions && batch < 9) {
+      console.log(`Prepared ${saved.filter(Boolean).length}/50 sessions; pacing new logins.`);
+      await new Promise((resolve) => setTimeout(resolve, 11000));
+    }
   }
   console.log('Authenticated sessions:', sessions.length);
   await Promise.all(
