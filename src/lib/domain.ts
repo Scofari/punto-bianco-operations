@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { stayNights } from './dates';
 
 export const roles = [
   'admin',
@@ -40,7 +41,13 @@ export const personSchema = z
         path: ['freeNights'],
         message: 'Selectați cazare gratuită sau zero nopți gratuite.',
       });
-    const nights = Math.ceil((Date.parse(v.departure) - Date.parse(v.arrival)) / 86400000);
+    if (v.accommodationFree && v.freeNights < 1)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['freeNights'],
+        message: 'Cazarea gratuită necesită cel puțin o noapte gratuită.',
+      });
+    const nights = stayNights(v.arrival, v.departure);
     if (v.freeNights > nights)
       ctx.addIssue({
         code: 'custom',

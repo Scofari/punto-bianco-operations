@@ -13,7 +13,8 @@ import {
 import { Dialog } from '@/components/dialog';
 import { ro } from '@/lib/ro';
 import { api } from '@/lib/api';
-import { localDate, toUtc } from '@/lib/dates';
+import { localDate, toUtc, stayNights } from '@/lib/dates';
+import { DateTimeInput, IntegerInput } from '@/components/form-inputs';
 import { visitSchema, type Staff, type PersonInput } from '@/lib/domain';
 import type { VisitRow, StaffRow } from '@/lib/types';
 function PersonFields({
@@ -28,6 +29,20 @@ function PersonFields({
   initial?: VisitRow;
 }) {
   const [free, setFree] = useState(initial?.accommodation_free ?? false);
+  const [arrival, setArrival] = useState(
+    initial ? localDate(initial.arrival, "yyyy-MM-dd'T'HH:mm") : '',
+  );
+  const [departure, setDeparture] = useState(
+    initial ? localDate(initial.departure, "yyyy-MM-dd'T'HH:mm") : '',
+  );
+  let maximumNights = 365;
+  if (arrival && departure) {
+    try {
+      maximumNights = Math.min(365, stayNights(toUtc(arrival), toUtc(departure)));
+    } catch {
+      maximumNights = 0;
+    }
+  }
   return (
     <>
       <div className="form-section-title">
@@ -82,20 +97,15 @@ function PersonFields({
       <div className="form-grid">
         <label>
           {ro.form.arrival}
-          <input
-            type="datetime-local"
-            name={`${prefix}.arrival`}
-            defaultValue={initial ? localDate(initial.arrival, "yyyy-MM-dd'T'HH:mm") : undefined}
-            required
-          />
+          <DateTimeInput name={`${prefix}.arrival`} value={arrival} onChange={setArrival} />
         </label>
         <label>
           {ro.form.departure}
-          <input
-            type="datetime-local"
+          <DateTimeInput
             name={`${prefix}.departure`}
-            defaultValue={initial ? localDate(initial.departure, "yyyy-MM-dd'T'HH:mm") : undefined}
-            required
+            value={departure}
+            onChange={setDeparture}
+            after={arrival}
           />
         </label>
         <label className="span-two">
@@ -176,13 +186,11 @@ function PersonFields({
         {free && (
           <label>
             {ro.form.freeNights}
-            <input
-              type="number"
+            <IntegerInput
               name={`${prefix}.freeNights`}
               min={1}
-              max={365}
+              max={maximumNights}
               defaultValue={initial?.free_nights || 1}
-              required
             />
           </label>
         )}

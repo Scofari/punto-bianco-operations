@@ -10,7 +10,7 @@ import {
   type Staff,
   roles,
 } from '../src/lib/domain';
-import { toUtc, localDate } from '../src/lib/dates';
+import { toUtc, localDate, stayNights } from '../src/lib/dates';
 const person = {
   firstName: 'Andrei',
   lastName: 'Munteanu',
@@ -46,6 +46,33 @@ test('treated companion requires a complete independent visit', () => {
     }).success,
     true,
   );
+});
+test('free nights require positive whole numbers within the actual stay', () => {
+  for (const freeNights of [-123, -1, 0, 1.5, 366, Infinity, NaN]) {
+    assert.equal(personSchema.safeParse({ ...person, freeNights }).success, false);
+  }
+  for (const freeNights of [1, 5]) {
+    assert.equal(personSchema.safeParse({ ...person, freeNights }).success, true);
+  }
+  assert.equal(
+    personSchema.safeParse({ ...person, accommodationFree: false, freeNights: 0 }).success,
+    true,
+  );
+  const extendedHours = { ...person, departure: '2026-11-08T14:00:00.000Z' };
+  assert.equal(personSchema.safeParse({ ...extendedHours, freeNights: 6 }).success, false);
+  const sameDay = { ...person, departure: '2026-11-03T18:00:00.000Z', freeNights: 1 };
+  assert.equal(personSchema.safeParse(sameDay).success, false);
+  assert.equal(
+    personSchema.safeParse({ ...sameDay, accommodationFree: false, freeNights: 0 }).success,
+    true,
+  );
+});
+test('stay nights count clinic calendar dates, including short overnight stays and DST', () => {
+  assert.equal(stayNights(toUtc('2026-11-03T23:00'), toUtc('2026-11-04T06:00')), 1);
+  assert.equal(stayNights(toUtc('2026-03-28T12:00'), toUtc('2026-03-30T12:00')), 2);
+  assert.equal(stayNights(toUtc('2026-10-24T12:00'), toUtc('2026-10-26T12:00')), 2);
+  assert.equal(stayNights(person.departure, person.arrival), 0);
+  assert.equal(stayNights('invalid', person.departure), 0);
 });
 test('one-way and round-trip directions do not invent extra legs', () => {
   assert.deepEqual(transferDirections('none'), []);

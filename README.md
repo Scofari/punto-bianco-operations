@@ -47,7 +47,7 @@ The application is a modular monolith. Next.js pages and Route Handlers call ser
 - Visit, companion, tasks, transfers and notifications are created in one transaction. An actor-scoped idempotency key prevents duplicate registration on retries.
 - Record versions reject stale edits with `409`. Row locks serialize travel-group edits and back-office claims. Completed back-office work is preserved during visit edits.
 - Changes to accommodation requirements or stay dates reset an existing reservation and clear its stale address/reference. The editor warns about this before saving.
-- UTC timestamps are rendered in `Europe/Chisinau`. Free accommodation is measured in nights. One-way transfers explicitly select arrival or departure.
+- UTC timestamps are rendered in `Europe/Chisinau`. Free accommodation requires 1–365 whole nights, capped at the stay's clinic-local calendar nights; paid accommodation requires zero free nights. The form blocks negative/decimal entry and paste, and the API independently validates these rules. Clicking anywhere in arrival/departure fields opens the native picker where supported. One-way transfers explicitly select arrival or departure.
 - Recipient-only RLS protects persisted notifications. Realtime signals refreshes; reconnect, focus and a 30-second fallback poll reload database records. No clinical content is put in notification payloads.
 - Browser mutations require a matching Origin. Personalized responses use `private, no-store`; query values are parameterized and unexpected errors do not expose payloads or secrets.
 
